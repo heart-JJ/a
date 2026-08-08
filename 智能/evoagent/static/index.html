@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'self'">
+  <title>EvoAgent · 智能对话</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="会话侧栏">
+      <div class="sidebar-head">
+        <a class="brand" href="/" data-new-chat aria-label="EvoAgent 首页">
+          <span class="brand-mark" aria-hidden="true">E</span>
+          <span>EvoAgent</span>
+        </a>
+        <button class="icon-button sidebar-close" id="sidebarCloseButton" type="button" aria-label="关闭会话侧栏">×</button>
+      </div>
+
+      <button class="new-chat-button" id="newChatButton" type="button">
+        <span aria-hidden="true">＋</span>
+        <span>新建对话</span>
+      </button>
+
+      <nav class="conversation-nav" aria-label="会话记录">
+        <div class="conversation-list" id="conversationList" aria-live="polite"></div>
+      </nav>
+
+      <nav class="management-nav" aria-label="管理入口">
+        <button type="button" data-management="skills" aria-controls="managementDialog">
+          <span aria-hidden="true">◇</span><span>技能库</span>
+        </button>
+        <button type="button" data-management="memories" aria-controls="managementDialog">
+          <span aria-hidden="true">◎</span><span>记忆 / 经验</span>
+        </button>
+        <button type="button" data-management="settings" aria-controls="managementDialog">
+          <span aria-hidden="true">⚙</span><span>设置</span>
+        </button>
+      </nav>
+    </aside>
+
+    <button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="关闭会话侧栏" tabindex="-1"></button>
+
+    <main class="chat-main">
+      <header class="chat-topbar">
+        <button class="icon-button mobile-menu-button" id="mobileMenuButton" type="button" aria-label="打开会话侧栏" aria-controls="sidebar" aria-expanded="false">☰</button>
+        <div class="chat-heading">
+          <h1 id="conversationTitle">新对话</h1>
+          <span id="connectionStatus" class="connection-status" role="status">正在连接</span>
+        </div>
+        <div class="model-field">
+          <label for="modelSelect">聊天模型</label>
+          <select id="modelSelect" aria-describedby="modelHint">
+            <option value="openrouter/free">OpenRouter Free Router</option>
+          </select>
+          <span class="sr-only" id="modelHint">模型切换对下一条消息生效</span>
+        </div>
+      </header>
+
+      <section class="message-scroller" id="messageScroller" aria-label="对话消息">
+        <div class="message-column" id="messageList" role="log" aria-live="off" aria-busy="false"></div>
+        <button class="jump-latest-button hidden" id="jumpLatestButton" type="button">有新回复 ↓</button>
+      </section>
+
+      <div class="composer-zone">
+        <form class="composer" id="composerForm">
+          <label class="sr-only" for="messageInput">输入消息</label>
+          <textarea id="messageInput" rows="1" maxlength="30000" placeholder="给 EvoAgent 发送消息" aria-describedby="composerHelp"></textarea>
+          <button class="send-button" id="sendButton" type="submit" aria-label="发送消息">
+            <span aria-hidden="true">↑</span>
+          </button>
+          <button class="stop-button hidden" id="stopButton" type="button" aria-label="停止生成">
+            <span aria-hidden="true"></span>
+          </button>
+        </form>
+        <p class="composer-help" id="composerHelp">Enter 发送，Shift + Enter 换行。系统只执行已授权的本地技能。</p>
+      </div>
+    </main>
+  </div>
+
+  <dialog class="management-dialog" id="managementDialog" aria-labelledby="managementTitle">
+    <div class="drawer-shell">
+      <header class="drawer-head">
+        <div>
+          <p class="eyebrow">EVOAGENT CONTROL</p>
+          <h2 id="managementTitle">管理</h2>
+        </div>
+        <button class="icon-button" id="managementCloseButton" type="button" aria-label="关闭管理面板">×</button>
+      </header>
+
+      <section class="drawer-view" id="skillsView" data-drawer-view="skills" aria-labelledby="skillsTitle">
+        <div class="section-head">
+          <div><h3 id="skillsTitle">技能库</h3><p>查看技能，并创建声明式技能或不可变新版本。</p></div>
+          <button class="secondary-button" id="createSkillButton" type="button">新建技能</button>
+        </div>
+        <div class="drawer-list" id="skillsList"></div>
+
+        <form class="editor-card hidden" id="skillEditorForm">
+          <div class="editor-head">
+            <div><span class="eyebrow" id="skillEditorKicker">NEW SKILL</span><h4 id="skillEditorTitle">新建技能</h4></div>
+            <button class="icon-button small" id="skillEditorCloseButton" type="button" aria-label="关闭技能编辑器">×</button>
+          </div>
+          <input id="skillEditorMode" type="hidden" value="create">
+          <input id="skillEditorId" type="hidden">
+          <label for="skillName">名称</label>
+          <input id="skillName" name="name" required maxlength="100">
+          <label for="skillDescription">描述</label>
+          <textarea id="skillDescription" name="description" rows="2" maxlength="500"></textarea>
+          <label for="skillPrompt">技能提示词</label>
+          <textarea id="skillPrompt" name="prompt" rows="5" maxlength="12000" required placeholder="说明这个技能应如何处理用户输入"></textarea>
+          <label for="skillTriggers">触发词</label>
+          <input id="skillTriggers" name="triggers" maxlength="1000" placeholder="例如：总结，提炼要点，摘要（用逗号分隔）">
+          <div class="form-grid">
+            <div><label for="skillKind">类型</label><select id="skillKind"><option value="atomic">原子技能</option><option value="workflow">工作流</option></select></div>
+            <div><label for="skillActivate">发布方式</label><label class="check-row"><input id="skillActivate" type="checkbox" checked><span>创建后激活</span></label></div>
+          </div>
+          <label for="skillChangelog">变更说明</label>
+          <input id="skillChangelog" maxlength="300" value="通过聊天控制台创建">
+          <details class="advanced-editor">
+            <summary>高级 JSON 定义</summary>
+            <p>提示词和触发词会同步到此定义；执行步骤必须使用安全的声明式操作。</p>
+            <label for="skillSpec">完整声明式定义（JSON）</label>
+            <textarea class="code-input" id="skillSpec" rows="12" spellcheck="false" required>{
+  "schema_version": 1,
+  "executable": true,
+  "prompt": "请根据用户输入完成此技能。",
+  "triggers": {"include": [], "examples": [], "exclude": []},
+  "executor": {"type": "pipeline", "steps": [{"op": "normalize_text"}]},
+  "permissions": {"filesystem": [], "network": [], "commands": []}
+}</textarea>
+          </details>
+          <div class="form-actions">
+            <button class="primary-button" id="skillSaveButton" type="submit">保存技能</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="drawer-view hidden" id="memoriesView" data-drawer-view="memories" aria-labelledby="memoriesTitle">
+        <div class="section-head">
+          <div><h3 id="memoriesTitle">记忆 / 经验</h3><p>对话事实、技能版本和可信反馈形成可追溯经验。</p></div>
+          <button class="secondary-button" id="refreshMemoriesButton" type="button">刷新</button>
+        </div>
+        <div class="drawer-list" id="memoriesList"></div>
+      </section>
+
+      <section class="drawer-view hidden" id="settingsView" data-drawer-view="settings" aria-labelledby="settingsTitle">
+        <div class="section-head">
+          <div><h3 id="settingsTitle">设置</h3><p>管理 OpenRouter、聊天模型和记忆检索。</p></div>
+        </div>
+        <form class="settings-form" id="settingsForm">
+          <label for="apiKey">OpenRouter API Key</label>
+          <input id="apiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="输入新 Key；留空则保持不变">
+          <small class="field-help" id="apiKeyStatus">正在检查配置状态…</small>
+          <label for="chatModelSelect">默认聊天模型</label>
+          <select id="chatModelSelect"><option value="openrouter/free">OpenRouter Free Router</option></select>
+          <label for="embeddingModel">Embedding 模型</label>
+          <input id="embeddingModel" maxlength="200" value="nvidia/nemotron-3-embed-1b:free" required spellcheck="false">
+          <small class="field-help">仅用于记忆向量化与检索，不会作为聊天生成模型。</small>
+          <label for="temperature">生成温度（可选，0–2）</label>
+          <input id="temperature" type="number" min="0" max="2" step="0.1" inputmode="decimal" placeholder="0.7">
+          <label class="setting-row" for="memoryEnabled">
+            <span><strong>启用经验记忆</strong><small>允许完成的对话形成可检索经验。</small></span>
+            <input id="memoryEnabled" type="checkbox">
+          </label>
+          <label class="setting-row privacy-setting" for="allowDataCollection">
+            <span><strong>允许免费模型提供商处理数据</strong><small>默认关闭。你选择的 <code>:free</code> 模型可能需要把对话交给免费模型提供商处理；关闭时这些模型可能不可用。</small></span>
+            <input id="allowDataCollection" type="checkbox">
+          </label>
+          <div class="runtime-card">
+            <span class="status-dot" id="runtimeStatusDot" aria-hidden="true"></span>
+            <div><strong id="runtimeStatusText">正在检查本地服务</strong><small>所有请求仅发送到当前本地服务。</small></div>
+          </div>
+          <div class="form-actions"><button class="primary-button" id="settingsSaveButton" type="submit">保存设置</button></div>
+        </form>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="renameDialog" aria-labelledby="renameTitle">
+    <form method="dialog" id="renameForm">
+      <h2 id="renameTitle">重命名对话</h2>
+      <label for="renameInput">会话名称</label>
+      <input id="renameInput" required maxlength="120" autocomplete="off">
+      <div class="dialog-actions">
+        <button class="secondary-button" value="cancel" type="button" data-dialog-cancel="renameDialog">取消</button>
+        <button class="primary-button" value="save" type="submit">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="confirm-dialog" id="deleteDialog" aria-labelledby="deleteTitle">
+    <div>
+      <h2 id="deleteTitle">删除这条对话？</h2>
+      <p>聊天记录会从会话列表移除；已经形成的经验和审计记录不会随之删除。</p>
+      <div class="dialog-actions">
+        <button class="secondary-button" type="button" data-dialog-cancel="deleteDialog">取消</button>
+        <button class="danger-button" id="confirmDeleteButton" type="button">删除</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sr-only" id="streamAnnouncement" role="status" aria-live="polite"></div>
+  <script src="/app.js"></script>
+</body>
+</html>
