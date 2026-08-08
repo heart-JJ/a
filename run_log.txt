@@ -1,7 +1,6 @@
 === Pull log ===
-已经是最新的。
-来自 https://github.com/heart-JJ/a
- * branch            main       -> FETCH_HEAD
+error: RPC 失败。curl 16 Error in the HTTP2 framing layer
+fatal: 在引用列表之后应该有一个 flush 包
 
 === Run output ===
 python: can't open file '/mnt/workspace/a/main.py': [Errno 2] No such file or directory
